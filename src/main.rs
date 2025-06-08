@@ -1,0 +1,71 @@
+use color_eyre::Result;
+use ratatui::{
+    DefaultTerminal, Frame,
+    crossterm::event::{self, Event},
+    layout::{Constraint, Layout},
+    style::{Color, Stylize},
+    widgets::{Block, BorderType, List, ListItem, Paragraph, Widget},
+};
+
+#[derive(Debug, Default)]
+struct App {
+    todos: Vec<TodoItem>,
+}
+
+#[derive(Debug, Default)]
+struct TodoItem {
+    done: bool,
+    description: String,
+}
+
+fn main() -> Result<()> {
+    color_eyre::install()?;
+
+    let mut app = App::default();
+
+    app.todos.push(TodoItem {
+        done: false,
+        description: "This is a test".to_owned(),
+    });
+    let term = ratatui::init();
+    let result = game_loop(term, &mut app);
+    ratatui::restore();
+    result
+}
+
+fn game_loop(mut terminal: DefaultTerminal, app: &mut App) -> Result<()> {
+    loop {
+        // Rendering
+        terminal.draw(|f| render(f, app))?;
+        // Inputs
+        if let Event::Key(key) = event::read()? {
+            match key.code {
+                event::KeyCode::Esc => {
+                    break;
+                }
+                _ => {}
+            }
+        }
+    }
+    Ok(())
+}
+
+fn render(frame: &mut Frame, app: &App) {
+    let [border_area] = Layout::vertical([Constraint::Fill(1)])
+        .margin(1)
+        .areas(frame.area());
+    let [list_area] = Layout::vertical([Constraint::Fill(1)])
+        .margin(1)
+        .areas(border_area);
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .fg(Color::Red)
+        .render(border_area, frame.buffer_mut());
+    //Paragraph::new("Hello from app!").render(frame.area(), frame.buffer_mut());
+    List::new(
+        app.todos
+            .iter()
+            .map(|i| ListItem::from(i.description.clone())),
+    )
+    .render(list_area, frame.buffer_mut());
+}
